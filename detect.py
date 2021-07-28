@@ -139,11 +139,11 @@ class Gazoudalo:
 ## 画像変換器 ##
 
 class Dinonet:
-    def __init__(self,net,cn,hozon_folder,gakushuuritsu=1e-3,gpu=1):
-        self.gakushuuritsu = gakushuuritsu
+    def __init__(self,net,cn,save_folder,learning_rate=1e-3,gpu=1):
+        self.learning_rate = learning_rate
         self.cn = cn
         self.net = net(cn=cn)
-        self.opt = torch.optim.Adam(self.net.parameters(),lr=gakushuuritsu)
+        self.opt = torch.optim.Adam(self.net.parameters(),lr=learning_rate)
         if(gpu):
             # GPUを使う場合
             self.dev = torch.device('cuda')
@@ -151,86 +151,86 @@ class Dinonet:
         else:
             self.dev = torch.device('cpu')
 
-        self.hozon_folder = hozon_folder
+        self.save_folder = save_folder
         # 保存のフォルダが元々なければ予め作っておく
-        if(not os.path.exists(hozon_folder)):
-            os.mkdir(hozon_folder)
+        if(not os.path.exists(save_folder)):
+            os.mkdir(save_folder)
         # 最初から開始
         self.mounankai = 0
-        self.sonshitsu = []
+        self.loss = []
         self.psnr = []
 
-    def gakushuu(self,dalo_kunren,dalo_kenshou,n_kurikaeshi,n_kaku=5,yokukataru=10):
-        print('訓練:%d枚 | 検証%d枚'%(dalo_kunren.len,dalo_kenshou.len))
+    def gakushuu(self,dalo_train,dalo_test,n_loop,n_kaku=5,cnt_multi=10):
+        print('訓練:%d枚 | 検証%d枚'%(dalo_train.len,dalo_test.len))
         t0 = time.time()
-        kenshou_data = []
-        for da_ken in dalo_kenshou:
-            kenshou_data.append(da_ken)
-        dalo_kunren.random = True
+        test_data = []
+        for da_ken in dalo_test:
+            test_data.append(da_ken)
+        dalo_train.random = True
         print('画像の準備に%.3f分かかった'%((t0-time.time())/60))
         print('==学習開始==')
 
         t0 = time.time()
         # 何回も繰り返して訓練する
-        for kaime in range(self.mounankai,self.mounankai+n_kurikaeshi):
+        for kaime in range(self.mounankai,self.mounankai+n_loop):
             # ミニバッチ開始
-            for i_batch,(x,y) in enumerate(dalo_kunren):
+            for i_batch,(x,y) in enumerate(dalo_train):
                 z = self.net(x.to(self.dev))
-                sonshitsu = mse(z,y.to(self.dev)) # 訓練データの損失
+                loss = mse(z,y.to(self.dev)) # 訓練データの損失
                 self.opt.zero_grad()
-                sonshitsu.backward()
+                loss.backward()
                 self.opt.step()
 
                 # 検証データにテスト
-                if((i_batch+1)%int(np.ceil(dalo_kunren.nkai/yokukataru))==0 or i_batch==dalo_kunren.nkai-1):
+                if((i_batch+1)%int(np.ceil(dalo_train.nkai/cnt_multi))==0 or i_batch==dalo_train.nkai-1):
                     self.net.eval()
-                    sonshitsu = []
+                    loss = []
                     psnr = []
                     if(n_kaku):
                         gazou = []
                         n_kaita = 0
 
-                    for x,y in kenshou_data:
+                    for x,y in test_data:
                         z = self.net(x.to(self.dev))
                         # 検証データの損失
-                        sonshitsu.append(mse(z,y.to(self.dev)).item())
+                        loss.append(mse(z,y.to(self.dev)).item())
+                        psnr.append(10*np.log10((1^2)/mse(z,y.to(self.dev)).item()))
                         # 検証データからできた一部の画像を書く
-                        if(n_kaita<n_kaku):
-                            x = x.numpy().transpose(0,2,3,1) # 入力
-                            y = y.numpy().transpose(0,2,3,1) # 模範
-                            z = np.clip(z.cpu().detach().numpy(),0,1).transpose(0,2,3,1) # 出力
-                            for i,(xi,yi,zi) in enumerate(zip(x,y,z)):
-                                # [入力、出力、模範]
-                                gazou.append(np.vstack([xi,zi,yi]))
-                                n_kaita += 1
-                                if(n_kaita>=n_kaku):
-                                    break
-                    sonshitsu = np.mean(sonshitsu)
-                    psnr.append(10*np.log10((1^2)/sonshitsu))
+                        # if(n_kaita<n_kaku):
+                        #     x = x.numpy().transpose(0,2,3,1) # 入力
+                        #     y = y.numpy().transpose(0,2,3,1) # 模範
+                        #     z = np.clip(z.cpu().detach().numpy(),0,1).transpose(0,2,3,1) # 出力
+                        #     for i,(xi,yi,zi) in enumerate(zip(x,y,z)):
+                        #         # [入力、出力、模範]
+                        #         gazou.append(np.vstack([xi,zi,yi]))
+                        #         n_kaita += 1
+                        #         if(n_kaita>=n_kaku):
+                        #             break
+                    loss = np.mean(loss)
                     psnr = np.mean(psnr)
                     # if(n_kaku):
                     #     gazou = np.hstack(gazou)
-                    #     # imsave(os.path.join(self.hozon_folder,'kekka%03d.jpg'%(kaime+1)),gazou)
+                    #     # imsave(os.path.join(self.save_folder,'kekka%03d.jpg'%(kaime+1)),gazou)
 
                     # 今の状態を出力する
-                    print('%d:%d/%d ~ 損失:%.4e %.2f分過ぎた'%(kaime+1,i_batch+1,dalo_kunren.nkai,sonshitsu,(time.time()-t0)/60))
+                    print('%d:%d/%d ~ 損失:%.4e %.2f分過ぎた'%(kaime+1,i_batch+1,dalo_train.nkai,loss,(time.time()-t0)/60))
                     print('PSNR = {}'.format(psnr))
                     self.net.train()
 
             # ミニバッチ一回終了
-            self.sonshitsu.append(sonshitsu)
+            self.loss.append(loss)
             self.psnr.append(psnr)
             # パラメータや状態を保存する
-            # sd = dict(w=self.net.state_dict(),o=self.opt.state_dict(),n=kaime+1,l=self.sonshitsu)
-            # torch.save(sd,os.path.join(self.hozon_folder,'netparam.pkl'))
+            # sd = dict(w=self.net.state_dict(),o=self.opt.state_dict(),n=kaime+1,l=self.loss)
+            # torch.save(sd,os.path.join(self.save_folder,'netparam.pkl'))
 
             # 損失（MSE）の変化を表すグラフを書く
             plt.figure(figsize=[5,4])
             plt.gca(ylabel='MSE')
             ar = np.arange(1,kaime+2)
-            plt.plot(ar,self.sonshitsu,'#11aa99')
+            plt.plot(ar,self.loss,'#11aa99')
             plt.tight_layout()
-            plt.savefig(os.path.join(self.hozon_folder,'graph.png'))
+            plt.savefig(os.path.join(self.save_folder,'graph.png'))
             plt.close()
 
             # PSNRの変化を表すグラフを書く
@@ -239,7 +239,7 @@ class Dinonet:
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.psnr,'#11aa99')
             plt.tight_layout()
-            plt.savefig(os.path.join(self.hozon_folder,'psnr.png'))
+            plt.savefig(os.path.join(self.save_folder,'psnr.png'))
             plt.close()
 
     def __call__(self,x,n_batch=8):
@@ -252,23 +252,23 @@ class Dinonet:
 
 ## 実行 ##
 
-kunren_folder = '/content/drive/MyDrive/gausian/dataset/train' # 訓練データのフォルダ
-kenshou_folder = '/content/drive/MyDrive/gausian/dataset/test' # 検証データのフォルダ
-hozon_folder = 'hozon' # 結果を保存するフォルダ
+train_folder = '/content/drive/MyDrive/gausian/dataset/train' # 訓練データのフォルダ
+test_folder = '/content/drive/MyDrive/gausian/dataset/test' # 検証データのフォルダ
+save_folder = 'save' # 結果を保存するフォルダ
 cn = 1 # チャネル数 (3色データ)
 n_batch = 8 # バッチサイズ
 px = 128 # 画像の大きさ
-n_kurikaeshi = 30 # 何回繰り返すか
+n_loop = 30 # 何回繰り返すか
 n_kaku = 6 # 見るために結果の画像を何枚出力する
-yokukataru = 10 # 一回の訓練で何回結果を出力する
+cnt_multi = 10 # 一回の訓練で何回結果を出力する
 
 # 使うモデルを選ぶ
 model = Unet
-#net = DnCNN
-#net = Win5RB
 
-dalo_kunren = Gazoudalo(kunren_folder,px,n_batch) # 訓練データ
-dalo_kenshou = Gazoudalo(kenshou_folder,px,n_batch) # 検証データ
-dino = Dinonet(model,cn,hozon_folder)
+
+dalo_train = Gazoudalo(train_folder,px,n_batch) # 訓練データ
+dalo_test = Gazoudalo(test_folder,px,n_batch) # 検証データ
+dino = Dinonet(model,cn,save_folder)
 # 学習開始
-dino.gakushuu(dalo_kunren,dalo_kenshou,n_kurikaeshi,n_kaku,yokukataru)
+dino.gakushuu(dalo_train,dalo_test,n_loop,n_kaku,cnt_multi)
+print("finish")

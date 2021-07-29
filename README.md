@@ -1,4 +1,4 @@
-# neural-network-gaussian-noise
+# unet-gaussian-noise
 python, pytorchでガウシアンノイズの濃淡除去を行う
 ニューラルネットワークモデルはU-netを用いる
 

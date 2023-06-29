@@ -8,6 +8,10 @@ from skimage.transform import resize
 import os,time,torch
 from torch import nn
 mse = nn.MSELoss()
+L1 = nn.L1Loss()
+SmoothL1 = nn.SmoothL1Loss()
+
+
 
 ## ニューラルネットワークモデル ##
 
@@ -139,7 +143,7 @@ class Gazoudalo:
 ## 画像変換器 ##
 
 class Dinonet:
-    def __init__(self,net,cn,save_folder,learning_rate=1e-3,gpu=1):
+    def __init__(self,net,cn,save_folder,learning_rate=1e-3,gpu=0):
         self.learning_rate = learning_rate
         self.cn = cn
         self.net = net(cn=cn)
@@ -226,7 +230,7 @@ class Dinonet:
 
             # 損失（MSE）の変化を表すグラフを書く
             plt.figure(figsize=[5,4])
-            plt.gca(ylabel='MSE')
+            plt.ylabel('MSE')
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.loss,'#11aa99')
             plt.tight_layout()
@@ -235,7 +239,7 @@ class Dinonet:
 
             # PSNRの変化を表すグラフを書く
             plt.figure(figsize=[5,4])
-            plt.gca(ylabel='PSNR')
+            plt.ylabel('PSNR')
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.psnr,'#11aa99')
             plt.tight_layout()
@@ -252,8 +256,8 @@ class Dinonet:
 
 ## 実行 ##
 
-train_folder = '/content/drive/MyDrive/gausian/dataset/train' # 訓練データのフォルダ
-test_folder = '/content/drive/MyDrive/gausian/dataset/test' # 検証データのフォルダ
+train_folder = './train' # 訓練データのフォルダ
+test_folder = './test' # 検証データのフォルダ
 save_folder = 'save' # 結果を保存するフォルダ
 cn = 1 # チャネル数 (3色データ)
 n_batch = 8 # バッチサイズ

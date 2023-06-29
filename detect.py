@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+from os import path
 from glob import glob
 import numpy as np
 import matplotlib.pyplot as plt
@@ -256,9 +256,9 @@ class Dinonet:
 
 ## 実行 ##
 
-train_folder = './train' # 訓練データのフォルダ
-test_folder = './test' # 検証データのフォルダ
-save_folder = 'save' # 結果を保存するフォルダ
+train_folder = path.join(path.dirname(__file__), 'train') # 訓練データのフォルダ
+test_folder = path.join(path.dirname(__file__), 'test') # 検証データのフォルダ
+save_folder = path.join(path.dirname(__file__), 'save') # 結果を保存するフォルダ
 cn = 1 # チャネル数 (3色データ)
 n_batch = 8 # バッチサイズ
 px = 128 # 画像の大きさ

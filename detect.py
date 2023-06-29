@@ -10,6 +10,8 @@ from torch import nn
 mse = nn.MSELoss()
 L1 = nn.L1Loss()
 SmoothL1 = nn.SmoothL1Loss()
+Gaussian = nn.GaussianNLLLoss()
+Poisson = nn.PoissonNLLLoss()
 
 
 
@@ -171,7 +173,7 @@ class Dinonet:
         for da_ken in dalo_test:
             test_data.append(da_ken)
         dalo_train.random = True
-        print('画像の準備に%.3f分かかった'%((t0-time.time())/60))
+        print('画像の準備に%.3f分かかった'%((time.time() - t0)/60))
         print('==学習開始==')
 
         t0 = time.time()
@@ -230,6 +232,7 @@ class Dinonet:
 
             # 損失（MSE）の変化を表すグラフを書く
             plt.figure(figsize=[5,4])
+            plt.xlabel('trial')
             plt.ylabel('MSE')
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.loss,'#11aa99')
@@ -239,6 +242,7 @@ class Dinonet:
 
             # PSNRの変化を表すグラフを書く
             plt.figure(figsize=[5,4])
+            plt.xlabel('trial')
             plt.ylabel('PSNR')
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.psnr,'#11aa99')

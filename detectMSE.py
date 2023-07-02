@@ -268,7 +268,7 @@ class Dinonet:
             # PSNRの変化を表すグラフを書く
             plt.figure(figsize=[5,4])
             plt.xlabel('trial')
-            plt.ylabel('PSNR')
+            plt.ylabel('PSNR(MSE)')
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.psnr,'#11aa99')
             plt.tight_layout()

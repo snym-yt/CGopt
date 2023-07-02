@@ -7,6 +7,7 @@ from matplotlib.image import imsave,imread
 from skimage.transform import resize
 import os,time,torch
 from torch import nn
+
 L1 = nn.L1Loss()
 
 
@@ -178,21 +179,16 @@ class Dinonet:
             # ミニバッチ開始
             for i_batch,(x,y) in enumerate(dalo_train):
                 z = self.net(x.to(self.dev))
-                # 訓練データの損失
-                lossL1 = L1(z,y.to(self.dev))
-
+                loss = L1(z,y.to(self.dev)) # 訓練データの損失
                 self.opt.zero_grad()
-                lossL1.backward()
+                loss.backward()
                 self.opt.step()
 
                 # 検証データにテスト
                 if((i_batch+1)%int(np.ceil(dalo_train.nkai/cnt_multi))==0 or i_batch==dalo_train.nkai-1):
                     self.net.eval()
-                    lossL1 = []
-                    psnrMSE = []
-                    psnrL1 = []
-                    psnrSL1 = []
-                    psnrPoisson = []
+                    loss = []
+                    psnr = []
                     if(n_kaku):
                         gazou = []
                         n_kaita = 0
@@ -200,8 +196,8 @@ class Dinonet:
                     for x,y in test_data:
                         z = self.net(x.to(self.dev))
                         # 検証データの損失
-                        lossL1.append(mse(z,y.to(self.dev)).item())
-                        psnrL1.append(10*np.log10((1^2)/L1(z,y.to(self.dev)).item()))
+                        loss.append(L1(z,y.to(self.dev)).item())
+                        psnr.append(10*np.log10((1^2)/L1(z,y.to(self.dev)).item()))
                         # 検証データからできた一部の画像を書く
                         # if(n_kaita<n_kaku):
                         #     x = x.numpy().transpose(0,2,3,1) # 入力
@@ -213,25 +209,25 @@ class Dinonet:
                         #         n_kaita += 1
                         #         if(n_kaita>=n_kaku):
                         #             break
-                    lossL1 = np.mean(lossL1)
-                    psnrL1 = np.mean(psnrL1)
+                    loss = np.mean(loss)
+                    psnr = np.mean(psnr)
                     # if(n_kaku):
                     #     gazou = np.hstack(gazou)
                     #     # imsave(os.path.join(self.save_folder,'kekka%03d.jpg'%(kaime+1)),gazou)
 
                     # 今の状態を出力する
-                    print('%d:%d/%d ~ 損失:%.4e %.2f分過ぎた'%(kaime+1,i_batch+1,dalo_train.nkai,lossL1,(time.time()-t0)/60))
-                    print('PSNR = {}'.format(psnrL1))
+                    print('%d:%d/%d ~ 損失:%.4e %.2f分過ぎた'%(kaime+1,i_batch+1,dalo_train.nkai,loss,(time.time()-t0)/60))
+                    print('PSNR = {}'.format(psnr))
                     self.net.train()
 
             # ミニバッチ一回終了
-            self.loss.append(lossL1)
-            self.psnr.append(psnrL1)
+            self.loss.append(loss)
+            self.psnr.append(psnr)
             # パラメータや状態を保存する
             # sd = dict(w=self.net.state_dict(),o=self.opt.state_dict(),n=kaime+1,l=self.loss)
             # torch.save(sd,os.path.join(self.save_folder,'netparam.pkl'))
 
-            # 損失（MSE）の変化を表すグラフを書く
+            # 損失（L1）の変化を表すグラフを書く
             plt.figure(figsize=[5,4])
             plt.xlabel('trial')
             plt.ylabel('L1')
@@ -244,7 +240,7 @@ class Dinonet:
             # PSNRの変化を表すグラフを書く
             plt.figure(figsize=[5,4])
             plt.xlabel('trial')
-            plt.ylabel('PSNR(L1)')
+            plt.ylabel('PSNR')
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.psnr,'#11aa99')
             plt.tight_layout()

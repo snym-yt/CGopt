@@ -8,10 +8,7 @@ from skimage.transform import resize
 import os,time,torch
 from torch import nn
 mse = nn.MSELoss()
-L1 = nn.L1Loss()
-SmoothL1 = nn.SmoothL1Loss()
-# Gaussian = nn.GaussianNLLLoss()
-Poisson = nn.PoissonNLLLoss()
+
 
 
 
@@ -183,28 +180,15 @@ class Dinonet:
             for i_batch,(x,y) in enumerate(dalo_train):
                 z = self.net(x.to(self.dev))
                 lossMSE = mse(z,y.to(self.dev)) # 訓練データの損失
-                lossL1 = L1(z,y.to(self.dev))
-                lossSL1 = SmoothL1(z,y.to(self.dev))
-                # lossGauss = Gaussian(z,y.to(self.dev))
-                lossPoisson = Poisson(z,y.to(self.dev))
                 self.opt.zero_grad()
                 lossMSE.backward()
-                lossL1.backward()
-                lossSL1.backward()
-                lossPoisson.backward()
                 self.opt.step()
 
                 # 検証データにテスト
                 if((i_batch+1)%int(np.ceil(dalo_train.nkai/cnt_multi))==0 or i_batch==dalo_train.nkai-1):
                     self.net.eval()
                     lossMSE = []
-                    lossL1 = []
-                    lossSL1 = []
-                    lossPoisson = []
                     psnrMSE = []
-                    psnrL1 = []
-                    psnrSL1 = []
-                    psnrPoisson = []
                     if(n_kaku):
                         gazou = []
                         n_kaita = 0
@@ -213,13 +197,7 @@ class Dinonet:
                         z = self.net(x.to(self.dev))
                         # 検証データの損失
                         lossMSE.append(mse(z,y.to(self.dev)).item())
-                        lossL1.append(mse(z,y.to(self.dev)).item())
-                        lossSL1.append(mse(z,y.to(self.dev)).item())
-                        lossPoisson.append(mse(z,y.to(self.dev)).item())
                         psnrMSE.append(10*np.log10((1^2)/mse(z,y.to(self.dev)).item()))
-                        psnrL1.append(10*np.log10((1^2)/L1(z,y.to(self.dev)).item()))
-                        psnrSL1.append(10*np.log10((1^2)/SmoothL1(z,y.to(self.dev)).item()))
-                        psnrPoisson.append(10*np.log10((1^2)/Poisson(z,y.to(self.dev)).item()))
                         # 検証データからできた一部の画像を書く
                         # if(n_kaita<n_kaku):
                         #     x = x.numpy().transpose(0,2,3,1) # 入力
@@ -232,25 +210,19 @@ class Dinonet:
                         #         if(n_kaita>=n_kaku):
                         #             break
                     lossMSE = np.mean(lossMSE)
-                    lossL1 = np.mean(lossL1)
-                    lossSL1 = np.mean(lossSL1)
-                    lossPoisson = np.mean(lossPoisson)
                     psnrMSE = np.mean(psnrMSE)
-                    psnrL1 = np.mean(psnrL1)
-                    psnrSL1 = np.mean(psnrSL1)
-                    psnrPoisson = np.mean(psnrPoisson)
                     # if(n_kaku):
                     #     gazou = np.hstack(gazou)
                     #     # imsave(os.path.join(self.save_folder,'kekka%03d.jpg'%(kaime+1)),gazou)
 
                     # 今の状態を出力する
-                    print('%d:%d/%d ~ 損失:%.4e %.2f分過ぎた'%(kaime+1,i_batch+1,dalo_train.nkai,loss,(time.time()-t0)/60))
-                    print('PSNR = {}'.format(psnr))
+                    print('%d:%d/%d ~ 損失:%.4e %.2f分過ぎた'%(kaime+1,i_batch+1,dalo_train.nkai,lossMSE,(time.time()-t0)/60))
+                    print('PSNR = {}'.format(psnrMSE))
                     self.net.train()
 
             # ミニバッチ一回終了
-            self.loss.append(loss)
-            self.psnr.append(psnr)
+            self.loss.append(lossMSE)
+            self.psnr.append(psnrMSE)
             # パラメータや状態を保存する
             # sd = dict(w=self.net.state_dict(),o=self.opt.state_dict(),n=kaime+1,l=self.loss)
             # torch.save(sd,os.path.join(self.save_folder,'netparam.pkl'))

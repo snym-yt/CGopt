@@ -14,7 +14,7 @@ mse = nn.MSELoss()
 
 
 ## 画像変換器 ##
-img_path = path.join(path.dirname(__file__), "test/input/1_256.jpg")
+img_path = path.join(path.dirname(__file__), "test/input/8_256.jpg")
 img_load = cv2.imread(img_path)
 I_t = cv2.cvtColor(img_load, cv2.COLOR_RGB2GRAY)
 [X_N,Y_N] = np.shape(I_t)
@@ -62,7 +62,7 @@ def main():
             b_x = b_x + (nablax_u - d_x)
             b_y = b_y + (nablay_u - d_y)
 
-    teach_img = cv2.imread(path.join(path.dirname(__file__), "test/teach/1_256.jpg"))
+    teach_img = cv2.imread(path.join(path.dirname(__file__), "test/teach/8_256.jpg"))
     teach_img = cv2.cvtColor(teach_img, cv2.COLOR_RGB2GRAY)
     loss = mse(torch.tensor(teach_img),torch.tensor(u)).item()
     psnr = 10*np.log10((1^2)/loss).item()

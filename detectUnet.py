@@ -189,31 +189,22 @@ class Dinonet:
                     self.net.eval()
                     lossMSE = []
                     psnrMSE = []
-                    if(n_kaku):
-                        gazou = []
-                        n_kaita = 0
 
                     for x,y in test_data:
                         z = self.net(x.to(self.dev))
                         # 検証データの損失
                         lossMSE.append(mse(z,y.to(self.dev)).item())
                         psnrMSE.append(10*np.log10((1^2)/mse(z,y.to(self.dev)).item()))
-                        # 検証データからできた一部の画像を書く
-                        # if(n_kaita<n_kaku):
-                        #     x = x.numpy().transpose(0,2,3,1) # 入力
-                        #     y = y.numpy().transpose(0,2,3,1) # 模範
-                        #     z = np.clip(z.cpu().detach().numpy(),0,1).transpose(0,2,3,1) # 出力
-                        #     for i,(xi,yi,zi) in enumerate(zip(x,y,z)):
-                        #         # [入力、出力、模範]
-                        #         gazou.append(np.vstack([xi,zi,yi]))
-                        #         n_kaita += 1
-                        #         if(n_kaita>=n_kaku):
-                        #             break
+
+                        plt.figure(figsize=[5,4])
+                        plt.imshow(z[1].squeeze().to('cpu').detach().numpy(), cmap='gray')
+                        plt.tight_layout()
+                        plt.savefig(os.path.join(self.save_folder,'denoised_image_Unet.png'))
+                        plt.close()
+
+
                     lossMSE = np.mean(lossMSE)
                     psnrMSE = np.mean(psnrMSE)
-                    # if(n_kaku):
-                    #     gazou = np.hstack(gazou)
-                    #     # imsave(os.path.join(self.save_folder,'kekka%03d.jpg'%(kaime+1)),gazou)
 
                     # 今の状態を出力する
                     print('%d:%d/%d ~ 損失:%.4e %.2f分過ぎた'%(kaime+1,i_batch+1,dalo_train.nkai,lossMSE,(time.time()-t0)/60))
@@ -223,9 +214,6 @@ class Dinonet:
             # ミニバッチ一回終了
             self.loss.append(lossMSE)
             self.psnr.append(psnrMSE)
-            # パラメータや状態を保存する
-            # sd = dict(w=self.net.state_dict(),o=self.opt.state_dict(),n=kaime+1,l=self.loss)
-            # torch.save(sd,os.path.join(self.save_folder,'netparam.pkl'))
 
             # 損失（MSE）の変化を表すグラフを書く
             plt.figure(figsize=[5,4])

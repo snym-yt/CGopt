@@ -5,12 +5,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.image import imsave,imread
 from skimage.transform import resize
-import os,time,torch
+import torch
 from torch import nn
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-import random
 mse = nn.MSELoss()
 
 
@@ -62,7 +61,13 @@ def main():
             d_y = shrink(nablay_u + b_y, 1/LAMBDA)
             b_x = b_x + (nablax_u - d_x)
             b_y = b_y + (nablay_u - d_y)
-    
+
+    teach_img = cv2.imread(path.join(path.dirname(__file__), "test/teach/1_256.jpg"))
+    teach_img = cv2.cvtColor(teach_img, cv2.COLOR_RGB2GRAY)
+    loss = mse(torch.tensor(teach_img),torch.tensor(u)).item()
+    psnr = 10*np.log10((1^2)/loss).item()
+    print(loss)
+    print(psnr)
     ## plot figure
     plt.figure()
     plt.subplot(1,2,1)
@@ -74,8 +79,6 @@ def main():
     plt.subplot(1,2,2)
     plt.gray()
     plt.imshow(np.round(u))
-    x1, y1 = [0,X_N], [50,50]
-    plt.plot(x1, y1)
     plt.title('Reconstructed')
     plt.axis("off")
 

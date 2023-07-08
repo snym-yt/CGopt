@@ -9,87 +9,136 @@ import os,time,torch
 from torch import nn
 mse = nn.MSELoss()
 
+NUM_SAMPLES = 1000
+ENV_NAME = "ALE/Breakout-v5"
+MINI_BATCH_SIZE = 8
+LEARNING_RATE_GENERATOR = 4e-5
+LEARNING_RATE_DISCRIMINATOR = 4e-5
+EPOCHS = 30
+CLIP_WEIGHTS = 0.01
+GENER_FILTERS = 1
 
+# Hyperparameter for saving the models in the training process
+# BASE_PATH = "/" 
+# CREATE_SAVES = True
+# LOAD_SAVES = False
 
 
 ## ニューラルネットワークモデル ##
 
-class Unet(nn.Module):
-    def __init__(self,cn=3):
-        super(Unet,self).__init__()
+class GAN(nn.Module):
+    def __init__(self, input_shape, output_shape, cn):
+        super(GAN, self).__init__()
+        self.cn = cn
+        self.generator = Generator(input_shape, output_shape)
+        self.discriminator = Discriminator(input_shape)
 
-        self.copu1 = nn.Sequential(
-            nn.Conv2d(cn,48,3,stride=1,padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(48,48,3,padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2)
-        )
+    def forward(self, x):
+        generated_images = self.generator(x)
+        reconstructed_images = self.discriminator(generated_images)
+        return reconstructed_images
 
-        for i in range(2,6):
-            self.add_module('copu%d'%i,
-                nn.Sequential(
-                    nn.Conv2d(48,48,3,stride=1,padding=1),
-                    nn.ReLU(inplace=True),
-                    nn.MaxPool2d(2)
-                )
-            )
+class Generator(nn.Module):
+  def __init__(self, input_shape=[8, 1, 128, 128], output_shape=[8, 1, 128, 128]):
+    super().__init__()
+    self.conv = nn.Sequential(
+        nn.ConvTranspose2d(input_shape[0], GENER_FILTERS * 8, kernel_size=4, stride=1),
+        nn.LeakyReLU(),
+        nn.BatchNorm2d(GENER_FILTERS * 8),
 
-        self.coasa1 = nn.Sequential(
-            nn.Conv2d(48,48,3,stride=1,padding=1),
-            nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(48,48,3,stride=2,padding=1,output_padding=1)
-        )
+        nn.ConvTranspose2d(GENER_FILTERS * 8, GENER_FILTERS * 4, kernel_size = 4, stride = 2, padding = 1),
+        nn.LeakyReLU(),
+        nn.BatchNorm2d(GENER_FILTERS * 4),
 
-        self.coasa2 = nn.Sequential(
-            nn.Conv2d(96,96,3,stride=1,padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(96,96,3,stride=1,padding=1),
-            nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(96,96,3,stride=2,padding=1,output_padding=1)
-        )
+        nn.ConvTranspose2d(GENER_FILTERS * 4, GENER_FILTERS * 2, kernel_size = 4, stride = 2, padding = 1),
+        nn.LeakyReLU(),
+        nn.BatchNorm2d(GENER_FILTERS * 2),
 
-        for i in range(3,6):
-            self.add_module('coasa%d'%i,
-                nn.Sequential(
-                    nn.Conv2d(144,96,3,stride=1,padding=1),
-                    nn.ReLU(inplace=True),
-                    nn.Conv2d(96,96,3,stride=1,padding=1),
-                    nn.ReLU(inplace=True),
-                    nn.ConvTranspose2d(96,96,3,stride=2,padding=1,output_padding=1)
-                )
-            )
-
-        self.coli = nn.Sequential(
-            nn.Conv2d(96+cn,64,3,stride=1,padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(64,32,3,stride=1,padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(32,cn,3,stride=1,padding=1),
-            nn.LeakyReLU(0.1)
-        )
-
-        for l in self.modules(): # 重みの初期値
-            if(type(l) in (nn.ConvTranspose2d,nn.Conv2d)):
-                nn.init.kaiming_normal_(l.weight.data)
-                l.bias.data.zero_()
-
-    def forward(self,x):
-        x1 = self.copu1(x)
-        x2 = self.copu2(x1)
-        x3 = self.copu3(x2)
-        x4 = self.copu4(x3)
-        x5 = self.copu5(x4)
-
-        z = self.coasa1(x5)
-        z = self.coasa2(torch.cat((z,x4),1))
-        z = self.coasa3(torch.cat((z,x3),1))
-        z = self.coasa4(torch.cat((z,x2),1))
-        z = self.coasa5(torch.cat((z,x1),1))
-
-        return self.coli(torch.cat((z,x),1))
+        nn.ConvTranspose2d(GENER_FILTERS * 2, GENER_FILTERS, kernel_size = 4, stride = 2, padding = 1),
+        nn.LeakyReLU(),
+        nn.BatchNorm2d(GENER_FILTERS)
+    )
+    print("self.conv(Generator):OK\n")
 
 
+    conv_out_size = self._get_conv_out(input_shape)
+    print("conv_out_size(Generator):OK\n")
+    print("conv_out_size(Generator):", conv_out_size)
+
+    self.out = nn.Sequential(
+        nn.Linear(conv_out_size, 1012),
+        nn.LeakyReLU(),
+        nn.Linear(1012, np.prod(output_shape[1:])),  # プロダクトの引数から最初の次元を削除
+        nn.Tanh()
+    )
+
+    self.output_shape = [output_shape[0], *output_shape[2:]]  # output_shapeの形状を修正
+    """
+    self.out = nn.Sequential(
+        nn.Linear(conv_out_size, 1012),
+        nn.LeakyReLU(),
+        nn.Linear(1012, np.prod(output_shape[1:])),  # プロダクトの引数から最初の次元を削除
+        nn.Tanh()
+    )
+
+    self.output_shape = [output_shape[0], *output_shape[2:]]  # output_shapeの形状を修正
+    """
+
+  def _get_conv_out(self, shape):
+    out = self.conv(torch.zeros(1, *shape))
+    return int(np.prod(out.size()))
+
+  def forward(self, input):
+    conv_out = self.conv(input).view(input.shape[0], -1)
+    return self.out(conv_out.view((-1, conv_out.size(1), *self.output_shape[2:])))
+
+
+  # def save(self):
+  #   if not os.path.exists(BASE_PATH):
+  #     os.makedirs(BASE_PATH)
+  #   # torch.save(self.state_dict(), BASE_PATH + "/generator.pt")
+
+  # def load(self):
+  #   self.load_state_dict(torch.load(BASE_PATH + "/generator.pt"), strict=False)
+
+
+class Discriminator(nn.Module):
+  def __init__(self, input_shape):
+    super().__init__()
+    self.conv = nn.Sequential(
+        nn.Conv2d(input_shape[0], 32, kernel_size = 8, stride = 4),
+        nn.ReLU(),
+        nn.Conv2d(32, 64, kernel_size = 4, stride = 2),
+        nn.ReLU(),
+        nn.Conv2d(64, 64, kernel_size = 3,stride = 1)
+    )
+
+    conv_out_size = self._get_conv_out(input_shape)
+
+    self.out = nn.Sequential(
+        nn.Linear(conv_out_size, 1012),
+        nn.ReLU(),
+        nn.Linear(1012, 1),
+        # nn.Dropout(0.005),
+        nn.Sigmoid()
+    )
+
+  def _get_conv_out(self, shape):
+    out = self.conv(torch.zeros(1, *shape))
+    return int(np.prod(out.size()))
+
+  def forward(self, input):
+    conv_out = self.conv(input).view(input.shape[0], -1)
+    return self.out(conv_out).squeeze(-1)
+"""""
+  def save(self):
+    if not os.path.exists(BASE_PATH):
+      os.makedirs(BASE_PATH)
+    torch.save(self.state_dict(), BASE_PATH + "/discriminator.pt")
+
+  def load(self):
+    self.load_state_dict(torch.load(BASE_PATH + "/discriminator.pt"), strict=False)
+"""""
 ## データローダ ##
 
 class Gazoudalo:
@@ -145,8 +194,13 @@ class Dinonet:
     def __init__(self,net,cn,save_folder,learning_rate=1e-3,gpu=0):
         self.learning_rate = learning_rate
         self.cn = cn
-        self.net = net(cn=cn)
-        self.opt = torch.optim.Adam(self.net.parameters(),lr=learning_rate)
+
+        self.input_shape = [1, 128, 128]  # 入力データの形状を設定する
+        self.output_shape = [1, 128, 128]  # 出力データの形状を設定する
+        self.net = net(self.input_shape, self.output_shape, self.cn)
+
+        # self.net = net()
+        # self.opt = torch.optim.Adam(self.net.parameters(),lr=learning_rate)
         if(gpu):
             # GPUを使う場合
             self.dev = torch.device('cuda')
@@ -180,9 +234,9 @@ class Dinonet:
             for i_batch,(x,y) in enumerate(dalo_train):
                 z = self.net(x.to(self.dev))
                 lossMSE = mse(z,y.to(self.dev)) # 訓練データの損失
-                self.opt.zero_grad()
+                # self.opt.zero_grad()
                 lossMSE.backward()
-                self.opt.step()
+                # self.opt.step()
 
                 # 検証データにテスト
                 if((i_batch+1)%int(np.ceil(dalo_train.nkai/cnt_multi))==0 or i_batch==dalo_train.nkai-1):
@@ -234,17 +288,17 @@ class Dinonet:
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.loss,'#11aa99')
             plt.tight_layout()
-            plt.savefig(os.path.join(self.save_folder,'graph_MSE.png'))
+            plt.savefig(os.path.join(self.save_folder,'graph_GAN.png'))
             plt.close()
 
             # PSNRの変化を表すグラフを書く
             plt.figure(figsize=[5,4])
             plt.xlabel('trial')
-            plt.ylabel('PSNR(U-net) [dB]')
+            plt.ylabel('PSNR(GAN)')
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.psnr,'#11aa99')
             plt.tight_layout()
-            plt.savefig(os.path.join(self.save_folder,'psnr_MSE.png'))
+            plt.savefig(os.path.join(self.save_folder,'psnr_GAN.png'))
             plt.close()
 
     def __call__(self,x,n_batch=8):
@@ -260,7 +314,7 @@ class Dinonet:
 train_folder = path.join(path.dirname(__file__), 'train') # 訓練データのフォルダ
 test_folder = path.join(path.dirname(__file__), 'test') # 検証データのフォルダ
 save_folder = path.join(path.dirname(__file__), 'save') # 結果を保存するフォルダ
-cn = 3 # チャネル数 (3色データ)
+cn = 1 # チャネル数 (3色データ)
 n_batch = 8 # バッチサイズ
 px = 128 # 画像の大きさ
 n_loop = 30 # 何回繰り返すか
@@ -268,7 +322,7 @@ n_kaku = 6 # 見るために結果の画像を何枚出力する
 cnt_multi = 10 # 一回の訓練で何回結果を出力する
 
 # 使うモデルを選ぶ
-model = Unet
+model = GAN
 
 
 dalo_train = Gazoudalo(train_folder,px,n_batch) # 訓練データ

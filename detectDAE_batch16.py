@@ -149,7 +149,7 @@ class Dinonet:
                         plt.figure(figsize=[5,4])
                         plt.imshow(z[1].squeeze().to('cpu').detach().numpy(), cmap='gray')
                         plt.tight_layout()
-                        plt.savefig(os.path.join(self.save_folder,'denoised_image.png'))
+                        plt.savefig(os.path.join(self.save_folder,'denoised_image_DAE_16.png'))
                         plt.close()
 
                     lossMSE = np.mean(lossMSE)
@@ -173,17 +173,17 @@ class Dinonet:
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.loss,'#11aa99')
             plt.tight_layout()
-            plt.savefig(os.path.join(self.save_folder,'graph_DAE.png'))
+            plt.savefig(os.path.join(self.save_folder,'graph_DAE_16.png'))
             plt.close()
 
             # PSNRの変化を表すグラフを書く
             plt.figure(figsize=[5,4])
             plt.xlabel('trial')
-            plt.ylabel('PSNR(DAE: batch size 8) [dB]')
+            plt.ylabel('PSNR(DAE: batch size 16) [dB]')
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.psnr,'#11aa99')
             plt.tight_layout()
-            plt.savefig(os.path.join(self.save_folder,'psnr_DAE.png'))
+            plt.savefig(os.path.join(self.save_folder,'psnr_DAE_16.png'))
             plt.close()
 
     def __call__(self,x,BATCH_SIZE=8):
@@ -201,7 +201,7 @@ train_folder = path.join(path.dirname(__file__), 'train') # 訓練データの�
 test_folder = path.join(path.dirname(__file__), 'test') # 検証データのフォルダ
 save_folder = path.join(path.dirname(__file__), 'save') # 結果を保存するフォルダ
 cn = 1 # チャネル数 
-BATCH_SIZE = 8 # バッチサイズ
+BATCH_SIZE = 16 # バッチサイズ
 px = 128 # 画像の大きさ
 EPOCH = 30 # 何回繰り返すか
 cnt_multi = 10 # 一回の訓練で何回結果を出力する

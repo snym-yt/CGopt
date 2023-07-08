@@ -27,10 +27,12 @@ class autoencoder(nn.Module):
             nn.Sigmoid())
 
     def forward(self, x):
-        x = x.view(x.size(0), -1)  # 入力を1次元に変換
+        # print("Hello World")
+        x = x.view(x.size(0),-1)  # 入力を1次元に変換
+        # print(x.size())
         x = self.encoder(x)
         x = self.decoder(x)
-        x = x.view(x.size(0), 1, 128, 128)  # 出力を画像の形状に変換
+        x = x.view(x.size(0),1, 128,128)  # 出力を画像の形状に変換
         return x
 
 
@@ -75,6 +77,7 @@ class Gazoudalo:
             # 指定のサイズに変える
             xi = resize(xi,(self.px,self.px),anti_aliasing=True,mode='constant')
             yi = resize(yi,(self.px,self.px),anti_aliasing=True,mode='constant')
+            # xi, yi = (1, height, width)
             xi = torch.Tensor(xi[None, :, :])
             yi = torch.Tensor(yi[None, :, :])
             x.append(xi)
@@ -145,22 +148,15 @@ class Dinonet:
                         # 検証データの損失
                         lossMSE.append(mse(z,y.to(self.dev)).item())
                         psnrMSE.append(10*np.log10((1^2)/mse(z,y.to(self.dev)).item()))
-                        # 検証データからできた一部の画像を書く
-                        # if(n_kaita<n_kaku):
-                        #     x = x.numpy().transpose(0,2,3,1) # 入力
-                        #     y = y.numpy().transpose(0,2,3,1) # 模範
-                        #     z = np.clip(z.cpu().detach().numpy(),0,1).transpose(0,2,3,1) # 出力
-                        #     for i,(xi,yi,zi) in enumerate(zip(x,y,z)):
-                        #         # [入力、出力、模範]
-                        #         gazou.append(np.vstack([xi,zi,yi]))
-                        #         n_kaita += 1
-                        #         if(n_kaita>=n_kaku):
-                        #             break
+
+                        plt.figure(figsize=[5,4])
+                        plt.imshow(z[0].squeeze().to('cpu').detach().numpy(), cmap='gray')
+                        plt.tight_layout()
+                        plt.savefig(os.path.join(self.save_folder,'denoised_image.png'))
+                        plt.close()
+
                     lossMSE = np.mean(lossMSE)
                     psnrMSE = np.mean(psnrMSE)
-                    # if(n_kaku):
-                    #     gazou = np.hstack(gazou)
-                    #     # imsave(os.path.join(self.save_folder,'kekka%03d.jpg'%(kaime+1)),gazou)
 
                     # 今の状態を出力する
                     print('%d:%d/%d ~ 損失:%.4e %.2f分過ぎた'%(kaime+1,i_batch+1,dalo_train.nkai,lossMSE,(time.time()-t0)/60))
@@ -170,11 +166,10 @@ class Dinonet:
             # ミニバッチ一回終了
             self.loss.append(lossMSE)
             self.psnr.append(psnrMSE)
-            # パラメータや状態を保存する
-            # sd = dict(w=self.net.state_dict(),o=self.opt.state_dict(),n=kaime+1,l=self.loss)
-            # torch.save(sd,os.path.join(self.save_folder,'netparam.pkl'))
+
 
             # 損失（MSE）の変化を表すグラフを書く
+
             plt.figure(figsize=[5,4])
             plt.xlabel('trial')
             plt.ylabel('MSE')

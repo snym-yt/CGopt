@@ -248,7 +248,7 @@ class Dinonet:
 train_folder = path.join(path.dirname(__file__), 'train') # 訓練データのフォルダ
 test_folder = path.join(path.dirname(__file__), 'test') # 検証データのフォルダ
 save_folder = path.join(path.dirname(__file__), 'save') # 結果を保存するフォルダ
-cn = 3 # チャネル数 (3色データ)
+cn = 1 # チャネル数 (3色データ)
 n_batch = 16 # バッチサイズ
 px = 128 # 画像の大きさ
 n_loop = 30 # 何回繰り返すか

@@ -197,7 +197,6 @@ class Dinonet:
 
                     for x,y in test_data:
                         z = self.net(x.to(self.dev))
-                        print(z)
                         # 検証データの損失
                         loss.append(mse(z,y.to(self.dev)).item())
                         psnr.append(10*np.log10((1^2)/mse(z,y.to(self.dev)).item()))

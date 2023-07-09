@@ -199,7 +199,7 @@ class Dinonet:
                         plt.figure(figsize=[5,4])
                         plt.imshow(z[1].squeeze().to('cpu').detach().numpy(), cmap='gray')
                         plt.tight_layout()
-                        plt.savefig(os.path.join(self.save_folder,'denoised_image_Unet.png'))
+                        plt.savefig(os.path.join(self.save_folder,'denoised_image_Unet_batch16.png'))
                         plt.close()
 
 
@@ -218,21 +218,21 @@ class Dinonet:
             # 損失（MSE）の変化を表すグラフを書く
             plt.figure(figsize=[5,4])
             plt.xlabel('trial')
-            plt.ylabel('MSE(U-net: batch size = 8)')
+            plt.ylabel('MSE(U-net: batch size = 16)')
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.loss,'#11aa99')
             plt.tight_layout()
-            plt.savefig(os.path.join(self.save_folder,'loss_Unet.png'))
+            plt.savefig(os.path.join(self.save_folder,'loss_Unet_batch16.png'))
             plt.close()
 
             # PSNRの変化を表すグラフを書く
             plt.figure(figsize=[5,4])
             plt.xlabel('trial')
-            plt.ylabel('PSNR(U-net: batch size = 8) [dB]')
+            plt.ylabel('PSNR(U-net: batch size = 16) [dB]')
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.psnr,'#11aa99')
             plt.tight_layout()
-            plt.savefig(os.path.join(self.save_folder,'psnr_Unet.png'))
+            plt.savefig(os.path.join(self.save_folder,'psnr_Unet_batch16.png'))
             plt.close()
 
     def __call__(self,x,n_batch=8):
@@ -249,7 +249,7 @@ train_folder = path.join(path.dirname(__file__), 'train') # 訓練データの�
 test_folder = path.join(path.dirname(__file__), 'test') # 検証データのフォルダ
 save_folder = path.join(path.dirname(__file__), 'save') # 結果を保存するフォルダ
 cn = 3 # チャネル数 (3色データ)
-n_batch = 8 # バッチサイズ
+n_batch = 16 # バッチサイズ
 px = 128 # 画像の大きさ
 n_loop = 30 # 何回繰り返すか
 n_kaku = 6 # 見るために結果の画像を何枚出力する

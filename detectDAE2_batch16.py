@@ -181,16 +181,16 @@ class Dinonet:
             # ミニバッチ開始
             for i_batch,(x,y) in enumerate(dalo_train):
                 z = self.net(x.to(self.dev))
-                lossMSE = mse(z,y.to(self.dev)) # 訓練データの損失
+                loss = mse(z,y.to(self.dev)) # 訓練データの損失
                 self.opt.zero_grad()
-                lossMSE.backward()
+                loss.backward()
                 self.opt.step()
 
                 # 検証データにテスト
                 if((i_batch+1)%int(np.ceil(dalo_train.nkai/cnt_multi))==0 or i_batch==dalo_train.nkai-1):
                     self.net.eval()
-                    lossMSE = []
-                    psnrMSE = []
+                    loss = []
+                    psnr = []
                     if(n_kaku):
                         gazou = []
                         n_kaita = 0
@@ -199,8 +199,8 @@ class Dinonet:
                         z = self.net(x.to(self.dev))
                         print(z)
                         # 検証データの損失
-                        lossMSE.append(mse(z,y.to(self.dev)).item())
-                        psnrMSE.append(10*np.log10((1^2)/mse(z,y.to(self.dev)).item()))
+                        loss.append(mse(z,y.to(self.dev)).item())
+                        psnr.append(10*np.log10((1^2)/mse(z,y.to(self.dev)).item()))
 
                         plt.figure(figsize=[5,4])
                         plt.imshow(z[0].squeeze().to('cpu').detach().numpy(), cmap='gray')
@@ -208,24 +208,24 @@ class Dinonet:
                         plt.savefig(os.path.join(self.save_folder,'denoised_image_DAE2_16.png'))
                         plt.close()
 
-                    lossMSE = np.mean(lossMSE)
-                    psnrMSE = np.mean(psnrMSE)
+                    loss = np.mean(loss)
+                    psnr = np.mean(psnr)
 
                     # 今の状態を出力する
-                    print('%d:%d/%d ~ 損失:%.4e %.2f分過ぎた'%(kaime+1,i_batch+1,dalo_train.nkai,lossMSE,(time.time()-t0)/60))
-                    print('PSNR = {}'.format(psnrMSE))
+                    print('%d:%d/%d ~ 損失:%.4e %.2f分過ぎた'%(kaime+1,i_batch+1,dalo_train.nkai,loss,(time.time()-t0)/60))
+                    print('PSNR = {}'.format(psnr))
                     self.net.train()
 
             # ミニバッチ一回終了
-            self.loss.append(lossMSE)
-            self.psnr.append(psnrMSE)
+            self.loss.append(loss)
+            self.psnr.append(psnr)
 
 
             # 損失（MSE）の変化を表すグラフを書く
 
             plt.figure(figsize=[5,4])
             plt.xlabel('trial')
-            plt.ylabel('MSE')
+            plt.ylabel('MSE(DAE: batch size = 16)')
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.loss,'#11aa99')
             plt.tight_layout()

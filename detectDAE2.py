@@ -225,7 +225,7 @@ class Dinonet:
 
             plt.figure(figsize=[5,4])
             plt.xlabel('trial')
-            plt.ylabel('MSE')
+            plt.ylabel('MSE(DAE: batch size = 8)')
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.loss,'#11aa99')
             plt.tight_layout()
@@ -235,7 +235,7 @@ class Dinonet:
             # PSNRの変化を表すグラフを書く
             plt.figure(figsize=[5,4])
             plt.xlabel('trial')
-            plt.ylabel('PSNR(DAE)')
+            plt.ylabel('PSNR(DAE: batch size = 8)')
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.psnr,'#11aa99')
             plt.tight_layout()

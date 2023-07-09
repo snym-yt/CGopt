@@ -82,7 +82,7 @@ def main():
     plt.title('Reconstructed')
     plt.axis("off")
 
-    plt.savefig(path.join(path.dirname(__file__), "save/TV.png"))
+    plt.savefig(path.join(path.dirname(__file__), "save/denoised_image_TV.png"))
 
 if __name__ == "__main__":
     main()

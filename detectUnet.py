@@ -222,7 +222,7 @@ class Dinonet:
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.loss,'#11aa99')
             plt.tight_layout()
-            plt.savefig(os.path.join(self.save_folder,'graph_MSE.png'))
+            plt.savefig(os.path.join(self.save_folder,'loss_Unet.png'))
             plt.close()
 
             # PSNRの変化を表すグラフを書く
@@ -232,7 +232,7 @@ class Dinonet:
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.psnr,'#11aa99')
             plt.tight_layout()
-            plt.savefig(os.path.join(self.save_folder,'psnr_MSE.png'))
+            plt.savefig(os.path.join(self.save_folder,'psnr_Unet.png'))
             plt.close()
 
     def __call__(self,x,n_batch=8):

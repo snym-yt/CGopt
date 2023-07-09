@@ -24,12 +24,10 @@ class autoencoder(nn.Module):
             nn.Linear(64, 256),
             nn.ReLU(True),
             nn.Linear(256, 128 * 128),  # 出力サイズも
-            nn.Sigmoid())
+            nn.Sigmoid())   # sigmoid: 入力値を0〜1にスケーリング
 
     def forward(self, x):
-        # print("Hello World")
         x = x.view(x.size(0),-1)  # 入力を1次元に変換
-        # print(x.size())
         x = self.encoder(x)
         x = self.decoder(x)
         x = x.view(x.size(0),1, 128,128)  # 出力を画像の形状に変換

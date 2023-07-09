@@ -18,9 +18,9 @@ class AutoEncoder(nn.Module):
 
         self.copu1 = nn.Sequential(
             nn.Conv2d(cn,48,3,stride=1,padding=1),
-            nn.BatchNorm2d(48),
+            nn.ReLU(inplace=True),
             nn.Conv2d(48,48,3,padding=1),
-            nn.BatchNorm2d(48),
+            nn.ReLU(inplace=True),
             nn.MaxPool2d(2)
         )
 
@@ -28,22 +28,22 @@ class AutoEncoder(nn.Module):
             self.add_module('copu%d'%i,
                 nn.Sequential(
                     nn.Conv2d(48,48,3,stride=1,padding=1),
-                    nn.BatchNorm2d(48),
+                    nn.ReLU(inplace=True),
                     nn.MaxPool2d(2)
                 )
             )
 
         self.coasa1 = nn.Sequential(
             nn.Conv2d(48,48,3,stride=1,padding=1),
-            nn.BatchNorm2d(48),
+            nn.ReLU(inplace=True),
             nn.ConvTranspose2d(48,48,3,stride=2,padding=1,output_padding=1)
         )
 
         self.coasa2 = nn.Sequential(
             nn.Conv2d(48,48,3,stride=1,padding=1),
-            nn.BatchNorm2d(48),
+            nn.ReLU(inplace=True),
             nn.Conv2d(48,48,3,stride=1,padding=1),
-            nn.BatchNorm2d(48),
+            nn.ReLU(inplace=True),
             nn.ConvTranspose2d(48,48,3,stride=2,padding=1,output_padding=1)
         )
 
@@ -51,19 +51,19 @@ class AutoEncoder(nn.Module):
             self.add_module('coasa%d'%i,
                 nn.Sequential(
                     nn.Conv2d(48,48,3,stride=1,padding=1),
-                    nn.BatchNorm2d(48),
+                    nn.ReLU(inplace=True),
                     nn.Conv2d(48,48,3,stride=1,padding=1),
-                    nn.BatchNorm2d(48),
+                    nn.ReLU(inplace=True),
                     nn.ConvTranspose2d(48,48,3,stride=2,padding=1,output_padding=1)
                 )
             )
 
         self.coli = nn.Sequential(
-            nn.Conv2d(48,48,3,stride=1,padding=1),
-            nn.BatchNorm2d(48),
-            nn.Conv2d(48,48,3,stride=1,padding=1),
-            nn.BatchNorm2d(48),
-            nn.Conv2d(48,cn,3,stride=1,padding=1),
+            nn.Conv2d(48,64,3,stride=1,padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64,32,3,stride=1,padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32,cn,3,stride=1,padding=1),
             nn.LeakyReLU(0.1)
         )
 
@@ -205,7 +205,7 @@ class Dinonet:
                         plt.figure(figsize=[5,4])
                         plt.imshow(z[0].squeeze().to('cpu').detach().numpy(), cmap='gray')
                         plt.tight_layout()
-                        plt.savefig(os.path.join(self.save_folder,'denoised_image.png'))
+                        plt.savefig(os.path.join(self.save_folder,'denoised_image_DAE.png'))
                         plt.close()
 
                     lossMSE = np.mean(lossMSE)

@@ -197,7 +197,7 @@ class Dinonet:
                         psnrMSE.append(10*np.log10((1^2)/mse(z,y.to(self.dev)).item()))
 
                         plt.figure(figsize=[5,4])
-                        plt.imshow(z[1].squeeze().to('cpu').detach().numpy(), cmap='gray')
+                        plt.imshow(z[0].squeeze().to('cpu').detach().numpy(), cmap='gray')
                         plt.tight_layout()
                         plt.savefig(os.path.join(self.save_folder,'denoised_image_Unet_batch16.png'))
                         plt.close()

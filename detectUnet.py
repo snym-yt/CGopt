@@ -142,17 +142,12 @@ class Gazoudalo:
 ## 画像変換器 ##
 
 class Dinonet:
-    def __init__(self,net,cn,save_folder,learning_rate=1e-3,gpu=0):
+    def __init__(self,net,cn,save_folder,learning_rate=1e-3):
         self.learning_rate = learning_rate
         self.cn = cn
         self.net = net(cn=cn)
         self.opt = torch.optim.Adam(self.net.parameters(),lr=learning_rate)
-        if(gpu):
-            # GPUを使う場合
-            self.dev = torch.device('cuda')
-            self.net.cuda()
-        else:
-            self.dev = torch.device('cpu')
+        self.dev = torch.device("cuda" if (torch.cuda.device_count()>0) else "cpu")
 
         self.save_folder = save_folder
         # 保存のフォルダが元々なければ予め作っておく

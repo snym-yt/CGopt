@@ -148,6 +148,7 @@ class Dinonet:
         self.net = net(cn=cn)
         self.opt = torch.optim.Adam(self.net.parameters(),lr=learning_rate)
         self.dev = torch.device("cuda" if (torch.cuda.device_count()>0) else "cpu")
+        self.net.to(self.dev)
 
         self.save_folder = save_folder
         # 保存のフォルダが元々なければ予め作っておく

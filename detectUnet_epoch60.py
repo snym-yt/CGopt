@@ -10,11 +10,13 @@ from torch import nn
 mse = nn.MSELoss()
 
 
+
+
 ## ニューラルネットワークモデル ##
-    
-class AutoEncoder(nn.Module):
+
+class Unet(nn.Module):
     def __init__(self,cn=3):
-        super(AutoEncoder,self).__init__()
+        super(Unet,self).__init__()
 
         self.copu1 = nn.Sequential(
             nn.Conv2d(cn,48,3,stride=1,padding=1),
@@ -40,26 +42,26 @@ class AutoEncoder(nn.Module):
         )
 
         self.coasa2 = nn.Sequential(
-            nn.Conv2d(48,48,3,stride=1,padding=1),
+            nn.Conv2d(96,96,3,stride=1,padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(48,48,3,stride=1,padding=1),
+            nn.Conv2d(96,96,3,stride=1,padding=1),
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(48,48,3,stride=2,padding=1,output_padding=1)
+            nn.ConvTranspose2d(96,96,3,stride=2,padding=1,output_padding=1)
         )
 
         for i in range(3,6):
             self.add_module('coasa%d'%i,
                 nn.Sequential(
-                    nn.Conv2d(48,48,3,stride=1,padding=1),
+                    nn.Conv2d(144,96,3,stride=1,padding=1),
                     nn.ReLU(inplace=True),
-                    nn.Conv2d(48,48,3,stride=1,padding=1),
+                    nn.Conv2d(96,96,3,stride=1,padding=1),
                     nn.ReLU(inplace=True),
-                    nn.ConvTranspose2d(48,48,3,stride=2,padding=1,output_padding=1)
+                    nn.ConvTranspose2d(96,96,3,stride=2,padding=1,output_padding=1)
                 )
             )
 
         self.coli = nn.Sequential(
-            nn.Conv2d(48,64,3,stride=1,padding=1),
+            nn.Conv2d(96+cn,64,3,stride=1,padding=1),
             nn.ReLU(inplace=True),
             nn.Conv2d(64,32,3,stride=1,padding=1),
             nn.ReLU(inplace=True),
@@ -80,15 +82,12 @@ class AutoEncoder(nn.Module):
         x5 = self.copu5(x4)
 
         z = self.coasa1(x5)
-        z = self.coasa2(z)
-        z = self.coasa3(z)
-        z = self.coasa4(z)
-        z = self.coasa5(z)
+        z = self.coasa2(torch.cat((z,x4),1))
+        z = self.coasa3(torch.cat((z,x3),1))
+        z = self.coasa4(torch.cat((z,x2),1))
+        z = self.coasa5(torch.cat((z,x1),1))
 
-        return self.coli(z)
-
-
-
+        return self.coli(torch.cat((z,x),1))
 
 
 ## データローダ ##
@@ -129,7 +128,6 @@ class Gazoudalo:
             # 指定のサイズに変える
             xi = resize(xi,(self.px,self.px),anti_aliasing=True,mode='constant')
             yi = resize(yi,(self.px,self.px),anti_aliasing=True,mode='constant')
-            # xi, yi = (1, height, width)
             xi = torch.Tensor(xi[None, :, :])
             yi = torch.Tensor(yi[None, :, :])
             x.append(xi)
@@ -181,64 +179,60 @@ class Dinonet:
             # ミニバッチ開始
             for i_batch,(x,y) in enumerate(dalo_train):
                 z = self.net(x.to(self.dev))
-                loss = mse(z,y.to(self.dev)) # 訓練データの損失
+                lossMSE = mse(z,y.to(self.dev)) # 訓練データの損失
                 self.opt.zero_grad()
-                loss.backward()
+                lossMSE.backward()
                 self.opt.step()
 
                 # 検証データにテスト
                 if((i_batch+1)%int(np.ceil(dalo_train.nkai/cnt_multi))==0 or i_batch==dalo_train.nkai-1):
                     self.net.eval()
-                    loss = []
-                    psnr = []
-                    if(n_kaku):
-                        gazou = []
-                        n_kaita = 0
+                    lossMSE = []
+                    psnrMSE = []
 
                     for x,y in test_data:
                         z = self.net(x.to(self.dev))
                         # 検証データの損失
-                        loss.append(mse(z,y.to(self.dev)).item())
-                        psnr.append(10*np.log10((1^2)/mse(z,y.to(self.dev)).item()))
+                        lossMSE.append(mse(z,y.to(self.dev)).item())
+                        psnrMSE.append(10*np.log10((1^2)/mse(z,y.to(self.dev)).item()))
 
                         plt.figure(figsize=[5,4])
                         plt.imshow(z[0].squeeze().to('cpu').detach().numpy(), cmap='gray')
                         plt.tight_layout()
-                        plt.savefig(os.path.join(self.save_folder,'denoised_image_DAE2_16.png'))
+                        plt.savefig(os.path.join(self.save_folder,'denoised_image_Unet.png'))
                         plt.close()
 
-                    loss = np.mean(loss)
-                    psnr = np.mean(psnr)
+
+                    lossMSE = np.mean(lossMSE)
+                    psnrMSE = np.mean(psnrMSE)
 
                     # 今の状態を出力する
-                    print('%d:%d/%d ~ 損失:%.4e %.2f分過ぎた'%(kaime+1,i_batch+1,dalo_train.nkai,loss,(time.time()-t0)/60))
-                    print('PSNR = {}'.format(psnr))
+                    print('%d:%d/%d ~ 損失:%.4e %.2f分過ぎた'%(kaime+1,i_batch+1,dalo_train.nkai,lossMSE,(time.time()-t0)/60))
+                    print('PSNR = {}'.format(psnrMSE))
                     self.net.train()
 
             # ミニバッチ一回終了
-            self.loss.append(loss)
-            self.psnr.append(psnr)
-
+            self.loss.append(lossMSE)
+            self.psnr.append(psnrMSE)
 
             # 損失（MSE）の変化を表すグラフを書く
-
             plt.figure(figsize=[5,4])
             plt.xlabel('trial')
-            plt.ylabel('MSE(DAE: batch size = 16)')
+            plt.ylabel('MSE(U-net: batch size = 8)')
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.loss,'#11aa99')
             plt.tight_layout()
-            plt.savefig(os.path.join(self.save_folder,'loss_DAE2_16.png'))
+            plt.savefig(os.path.join(self.save_folder,'loss_Unet.png'))
             plt.close()
 
             # PSNRの変化を表すグラフを書く
             plt.figure(figsize=[5,4])
             plt.xlabel('trial')
-            plt.ylabel('PSNR(DAE: batch size = 16)')
+            plt.ylabel('PSNR(U-net: batch size = 8) [dB]')
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.psnr,'#11aa99')
             plt.tight_layout()
-            plt.savefig(os.path.join(self.save_folder,'psnr_DAE2_16.png'))
+            plt.savefig(os.path.join(self.save_folder,'psnr_Unet.png'))
             plt.close()
 
     def __call__(self,x,n_batch=8):
@@ -249,21 +243,20 @@ class Dinonet:
             y.append(self.net(x[i:i+n_batch].to(self.dev)).detach().cpu())
         return torch.cat(y).numpy()
 
-
 ## 実行 ##
 
 train_folder = path.join(path.dirname(__file__), 'train') # 訓練データのフォルダ
 test_folder = path.join(path.dirname(__file__), 'test') # 検証データのフォルダ
 save_folder = path.join(path.dirname(__file__), 'save') # 結果を保存するフォルダ
 cn = 1 # チャネル数 (3色データ)
-n_batch = 16 # バッチサイズ
+n_batch = 8 # バッチサイズ
 px = 128 # 画像の大きさ
-n_loop = 30 # 何回繰り返すか
+n_loop = 60 # 何回繰り返すか
 n_kaku = 6 # 見るために結果の画像を何枚出力する
 cnt_multi = 10 # 一回の訓練で何回結果を出力する
 
 # 使うモデルを選ぶ
-model = AutoEncoder
+model = Unet
 
 
 dalo_train = Gazoudalo(train_folder,px,n_batch) # 訓練データ

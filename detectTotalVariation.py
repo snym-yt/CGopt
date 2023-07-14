@@ -64,8 +64,8 @@ def main():
 
     teach_img = cv2.imread(path.join(path.dirname(__file__), "test/teach/8_256.jpg"))
     teach_img = cv2.cvtColor(teach_img, cv2.COLOR_RGB2GRAY)
-    loss = mse(torch.tensor(teach_img),torch.tensor(u)).item()
-    psnr = 10*np.log10((1^2)/loss).item()
+    loss = mse(torch.tensor(teach_img),torch.tensor(u)).item()/(255**2)
+    psnr = 10*np.log10((1**2)/loss).item()
     print(loss)
     print(psnr)
     ## plot figure

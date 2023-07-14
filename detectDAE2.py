@@ -195,7 +195,7 @@ class Dinonet:
                         z = self.net(x.to(self.dev))
                         # 検証データの損失
                         lossMSE.append(mse(z,y.to(self.dev)).item())
-                        psnrMSE.append(10*np.log10((1^2)/mse(z,y.to(self.dev)).item()))
+                        psnrMSE.append(10*np.log10((1**2)/mse(z,y.to(self.dev)).item()))
 
                         plt.figure(figsize=[5,4])
                         plt.imshow(z[0].squeeze().to('cpu').detach().numpy(), cmap='gray')

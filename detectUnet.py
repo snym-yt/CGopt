@@ -195,7 +195,7 @@ class Dinonet:
                         plt.figure(figsize=[5,4])
                         plt.imshow(z[0].squeeze().to('cpu').detach().numpy(), cmap='gray')
                         plt.tight_layout()
-                        plt.savefig(os.path.join(self.save_folder,'denoised_image_Unet.png'))
+                        plt.savefig(os.path.join(self.save_folder,'denoised_image_Unet_epoch30.png'))
                         plt.close()
 
 
@@ -218,7 +218,7 @@ class Dinonet:
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.loss,'#11aa99')
             plt.tight_layout()
-            plt.savefig(os.path.join(self.save_folder,'loss_Unet.png'))
+            plt.savefig(os.path.join(self.save_folder,'loss_Unet_epoch30.png'))
             plt.close()
 
             # PSNRの変化を表すグラフを書く
@@ -228,7 +228,7 @@ class Dinonet:
             ar = np.arange(1,kaime+2)
             plt.plot(ar,self.psnr,'#11aa99')
             plt.tight_layout()
-            plt.savefig(os.path.join(self.save_folder,'psnr_Unet.png'))
+            plt.savefig(os.path.join(self.save_folder,'psnr_Unet_epoch30.png'))
             plt.close()
 
     def __call__(self,x,n_batch=8):

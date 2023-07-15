@@ -69,20 +69,12 @@ def main():
     print(loss)
     print(psnr)
     ## plot figure
-    plt.figure()
-    plt.subplot(1,2,1)
-    plt.gray()
-    plt.imshow(I_t)
-    plt.title('Noisy')
-    plt.axis("off")
-    
-    plt.subplot(1,2,2)
+    plt.figure(figsize=[5,4])
     plt.gray()
     plt.imshow(np.round(u))
-    plt.title('Reconstructed')
-    plt.axis("off")
-
+    plt.tight_layout()
     plt.savefig(path.join(path.dirname(__file__), "save/denoised_image_TV.png"))
+    plt.close()
 
 if __name__ == "__main__":
     main()
